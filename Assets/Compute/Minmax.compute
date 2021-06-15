@@ -1,0 +1,29 @@
+﻿
+#pragma kernel CSMinMax
+#pragma kernel CSRec
+
+RWTexture2D<float4> outCortex;
+Texture2D<float4> cortex;
+RWStructuredBuffer<int> MinMax;
+float _Min;
+float _Max;
+
+
+[numthreads(32,32,1)]
+void CSMinMax (uint3 id : SV_DispatchThreadID)
+{
+    float4 C = cortex[id.xy];
+
+    InterlockedMin(MinMax[0], (int)(C.r * 255));
+    InterlockedMax(MinMax[1], (int)(C.r * 255));
+}
+
+[numthreads(32,32,1)] 
+void CSRec (uint3 id : SV_DispatchThreadID)
+{
+    float4 C = cortex[id.xy];
+
+    float F = (C.r - _Min)/(_Max - _Min);
+
+    outCortex[id.xy] = float4(C.r, F, 0, 1);
+}

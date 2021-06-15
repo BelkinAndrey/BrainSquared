@@ -1,0 +1,111 @@
+#pragma kernel CSMain
+#pragma kernel CSMinMax
+#pragma kernel CSUse
+#pragma kernel CSUseUp
+#pragma kernel CSHebb
+
+RWTexture2D<float4> outTexture;
+RWTexture2D<float4> outCortex;
+RWTexture2D<float4> outSynapseHebb;
+
+Texture2D<float4> synapse;
+Texture2D<float4> inputTex;
+Texture2D<float4> cortex;
+
+float Plastic = 1;
+float Learnability = 1;
+
+int SIZE = 28; 
+
+RWStructuredBuffer<int> MinMax;
+RWStructuredBuffer<int> XY;
+
+float _Min;
+float _Max;
+int _Max2;
+
+
+float Up;
+float Down;
+
+int R;
+
+uint number;
+
+int DownOn = 0;
+
+[numthreads(32,32,1)] 
+void CSMain (uint3 id : SV_DispatchThreadID)
+{
+    float4 S = synapse[id.xy];
+
+    uint X = id.x/SIZE;
+    uint Y = id.y/SIZE;
+
+    uint2 IXY = uint2(id.x - X * SIZE, id.y - Y * SIZE);
+    float I = inputTex[IXY].r;
+
+    float IS = I - S.r;
+    float L = Learnability;
+    if (L > abs(IS)) L = abs(IS);
+
+    float d = distance(uint2(X, Y), uint2((uint)XY[0], (uint)XY[1]));
+    float y = saturate((R + 1 - d)/(R + 1));
+
+    S.r += sign(IS) * Plastic * L * y;
+    
+	outTexture[id.xy] = float4(S.r, S.g, S.b, 1);
+}
+
+[numthreads(32,32,1)]
+void CSMinMax (uint3 id : SV_DispatchThreadID)
+{
+    float4 C = cortex[id.xy];
+
+    InterlockedMin(MinMax[0], (int)(C.r * 255));
+    InterlockedMax(MinMax[1], (int)(C.r * 255));
+    InterlockedMax(MinMax[2], (int)((C.r * (1 - C.b)) * 255));
+}
+
+[numthreads(32,32,1)] 
+void CSUse (uint3 id : SV_DispatchThreadID)
+{
+    float4 C = cortex[id.xy];
+
+    float F = (C.r - _Min)/(_Max - _Min);
+
+    int FU = (int)((C.r * (1 - C.b)) * 255);
+
+    if (FU == _Max2) 
+    {
+        XY[0] = id.x;
+        XY[1] = id.y;
+    }
+
+    outCortex[id.xy] = float4(C.r, F, C.b, 1);
+}
+
+[numthreads(32,32,1)] 
+void CSUseUp (uint3 id : SV_DispatchThreadID)
+{
+    float4 C = cortex[id.xy];
+    float U = C.b - (Down * DownOn);
+
+    float d = distance(id.xy, uint2((uint)XY[0], (uint)XY[1]));
+    float y = saturate((R + 1 - d)/(R + 1));
+
+    U += Up * y;
+
+    outCortex[id.xy] = float4(C.r, C.g, U, 1);
+}
+
+[numthreads(1,10,1)] 
+void CSHebb(uint3 id : SV_DispatchThreadID)
+{
+    uint2 outXY = uint2((uint)XY[0], (uint)XY[1] * 10 + id.y);
+    
+    float R = 0; 
+    if (id.y == number) R = 1;
+
+    outSynapseHebb[outXY] = float4(R, 1 - R, 0, 1);
+}

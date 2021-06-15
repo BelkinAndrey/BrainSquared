@@ -1,0 +1,31 @@
+﻿RWTexture2D<float4> outTexture;
+
+Texture2D<float4> synapse;
+Texture2D<float4> inputTex;
+Texture2D<float4> cortex;
+
+int SIZE = 28;
+
+#pragma kernel CSMain
+[numthreads(32,32,1)]
+void CSMain (uint3 id : SV_DispatchThreadID)
+{
+	float R = 0.0;
+	float4 C = cortex[id.xy];
+     
+
+	for (int X = 0; X < SIZE; X++)
+	{
+		for (int Y = 0; Y < SIZE; Y++)
+		{
+			uint2 xy = uint2(id.x * SIZE + X, id.y * SIZE + Y); 
+            float I = inputTex[uint2(X, Y)].r;
+			R += 1 - abs(I - synapse[xy].r);
+		}
+	}
+
+    R /= SIZE * SIZE;
+	R = pow(R, 3.0f);
+
+	outTexture[id.xy] = float4(R, C.g, C.b, 1);
+}

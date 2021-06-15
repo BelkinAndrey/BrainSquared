@@ -1,0 +1,33 @@
+﻿RWTexture2D<float4> SynapseRW;
+
+Texture2D<float4> Synapse;
+Texture2D<float4> cortex;
+
+int number = 0;
+float plastic = 1;
+
+
+#pragma kernel CSMain
+[numthreads(32,32,1)]
+void CSMain (uint3 id : SV_DispatchThreadID)
+{
+    uint Ix = id.x;
+    uint Iy = id.y / 10;
+    uint2 Ixy = uint2(Ix, Iy);
+    float I = cortex[Ixy].r;
+
+    float PR = Synapse[id.xy].r;
+    float NR = Synapse[id.xy].g;
+
+    int n = id.y % 10;
+    float C = 0;
+    if (n == number) C = 1;
+
+    PR += C * plastic * I;
+    PR -= (1 - C) * plastic * I / 10;
+
+    NR -= C * plastic * I;
+    NR += (1 - C) * plastic * I / 10;
+
+    SynapseRW[id.xy] = float4(PR, NR, 0, 1);
+}
