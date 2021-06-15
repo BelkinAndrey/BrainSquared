@@ -9,6 +9,7 @@ Video:
 [![Watch the video](https://img.youtube.com/vi/D4SdCz4x_fE/hqdefault.jpg)](https://youtu.be/D4SdCz4x_fE)
 
 Download build for Windows
+
 MNIST:
 https://drive.google.com/file/d/1rJk_YVvu-lkRXXcZ1Wb-ISw3S8kYCjEG/view?usp=sharing
 
